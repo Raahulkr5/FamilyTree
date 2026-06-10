@@ -1,0 +1,6 @@
+{
+  "name": "Family Tree",
+  "description": "Create, visualize, and discover your ancestry up to 7+ generations with AI-powered biography drafting, relationship suggestion, and dynamic tree layouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
