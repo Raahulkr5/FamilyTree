@@ -101,4 +101,23 @@ interface FamilyTreeDao {
 
     @Delete
     suspend fun deleteDocument(document: DocumentEntity)
+
+    // --- Nuke/Reset operations ---
+    @Query("DELETE FROM users")
+    suspend fun deleteAllUsers()
+
+    @Query("DELETE FROM trees")
+    suspend fun deleteAllTrees()
+
+    @Query("DELETE FROM members")
+    suspend fun deleteAllMembers()
+
+    @Query("DELETE FROM relationships")
+    suspend fun deleteAllRelationships()
+
+    @Query("DELETE FROM stories")
+    suspend fun deleteAllStories()
+
+    @Query("DELETE FROM documents")
+    suspend fun deleteAllDocuments()
 }

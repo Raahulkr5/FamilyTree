@@ -51,7 +51,8 @@ class MainActivity : ComponentActivity() {
         val viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
         setContent {
-            MyApplicationTheme {
+            val themeOption by viewModel.themeOption.collectAsState()
+            MyApplicationTheme(themeOption = themeOption) {
                 val currentScreen by viewModel.currentScreen.collectAsState()
 
                 Surface(

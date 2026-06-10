@@ -34,6 +34,7 @@ fun HomeScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val members by viewModel.members.collectAsState()
     val stories by viewModel.allStories.collectAsState()
     val docs by viewModel.allDocuments.collectAsState()
+    val themeOption by viewModel.themeOption.collectAsState()
 
     var showCreateTreeDialog by remember { mutableStateOf(false) }
     var newTreeName by remember { mutableStateOf("") }
@@ -103,6 +104,17 @@ fun HomeScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                                 }
                             )
                         }
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.toggleThemeOption() },
+                        modifier = Modifier.testTag("toggle_theme_home_button")
+                    ) {
+                        Icon(
+                            imageVector = if (themeOption == 1) Icons.Default.Palette else Icons.Default.AutoAwesome,
+                            contentDescription = "Toggle Theme option switcher",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
 
                     IconButton(onClick = { viewModel.logout() }, modifier = Modifier.testTag("logout_button")) {

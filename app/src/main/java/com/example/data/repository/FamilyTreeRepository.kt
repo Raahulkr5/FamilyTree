@@ -48,4 +48,14 @@ class FamilyTreeRepository(private val dao: FamilyTreeDao) {
     fun getDocumentsForMemberFlow(memberId: Int) = dao.getDocumentsForMemberFlow(memberId)
     suspend fun saveDocument(document: DocumentEntity) = dao.insertDocument(document)
     suspend fun deleteDocument(document: DocumentEntity) = dao.deleteDocument(document)
+
+    // Complete DB Nuke
+    suspend fun nukeDatabase() {
+        dao.deleteAllRelationships()
+        dao.deleteAllStories()
+        dao.deleteAllDocuments()
+        dao.deleteAllMembers()
+        dao.deleteAllTrees()
+        dao.deleteAllUsers()
+    }
 }

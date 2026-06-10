@@ -39,6 +39,14 @@ sealed interface Screen {
 
 class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() {
 
+    // Theme Option State (1 = Classic Gold Heritage, 2 = Cosmic Orchid Neon)
+    private val _themeOption = MutableStateFlow<Int>(1)
+    val themeOption: StateFlow<Int> = _themeOption.asStateFlow()
+
+    fun toggleThemeOption() {
+        _themeOption.value = if (_themeOption.value == 1) 2 else 1
+    }
+
     // Navigation State
     private val _currentScreen = MutableStateFlow<Screen>(Screen.Auth)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
@@ -156,7 +164,8 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
     }
 
     private suspend fun performLocalLogin(email: String, passwordHash: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val user = repository.getUserByEmail(email)
+        val cleanEmail = email.trim().lowercase()
+        val user = repository.getUserByEmail(cleanEmail)
         if (user != null) {
             if (passwordHash.isNotEmpty()) {
                 repository.logoutAll()
@@ -172,10 +181,10 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
         } else {
             // Instantly register user for beautiful, friction-free prototype!
             repository.logoutAll()
-            val uniquePhone = "sandbox_" + email.filter { it.isLetterOrDigit() }.take(10)
+            val uniquePhone = "sandbox_" + cleanEmail.filter { it.isLetterOrDigit() }.take(10)
             val newUser = UserEntity(
                 fullName = "Guest Historian",
-                email = email,
+                email = cleanEmail,
                 phone = uniquePhone,
                 passwordHash = passwordHash,
                 isSessionActive = true
@@ -183,7 +192,7 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
             val userId = repository.registerUser(newUser)
             // Seed a wonderful demo tree!
             seedDemoFamilyTree(userId.toInt(), "My Family Tree")
-            val loggedIn = repository.getUserByEmail(email)
+            val loggedIn = repository.getUserByEmail(cleanEmail)
             _activeUser.value = loggedIn
             _otpState.value = OtpStatus.Verified
             onSuccess()
@@ -192,33 +201,35 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
 
     private suspend fun handleSuccessfulFirebaseEmailLogin(email: String) {
         repository.logoutAll()
-        val existing = repository.getUserByEmail(email)
+        val cleanEmail = email.trim().lowercase()
+        val existing = repository.getUserByEmail(cleanEmail)
         if (existing != null) {
             val updated = existing.copy(isSessionActive = true)
             repository.updateUser(updated)
             _activeUser.value = updated
         } else {
-            val uniquePhone = "sandbox_" + email.filter { it.isLetterOrDigit() }.take(10)
+            val uniquePhone = "sandbox_" + cleanEmail.filter { it.isLetterOrDigit() }.take(10)
             val newUser = UserEntity(
                 fullName = "Guest Historian",
-                email = email,
+                email = cleanEmail,
                 phone = uniquePhone,
                 passwordHash = "firebase_verified_email",
                 isSessionActive = true
             )
             val userId = repository.registerUser(newUser)
             seedDemoFamilyTree(userId.toInt(), "My Family Tree")
-            val loggedIn = repository.getUserByEmail(email)
+            val loggedIn = repository.getUserByEmail(cleanEmail)
             _activeUser.value = loggedIn
         }
     }
 
     fun login(emailOrPhone: String, authCode: String, isOtpFlow: Boolean, onSuccess: () -> Unit, onError: (String) -> Unit) {
         _otpState.value = OtpStatus.Sending
+        val cleanInput = emailOrPhone.trim()
         viewModelScope.launch {
             if (isMockFirebaseConfigured()) {
                 android.util.Log.i("FirebaseAuth", "Mock Firebase API Key detected. Using local sandbox fallback login flows.")
-                performLocalLogin(emailOrPhone, authCode, onSuccess, onError)
+                performLocalLogin(cleanInput, authCode, onSuccess, onError)
                 return@launch
             }
             try {
@@ -227,12 +238,12 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
                     _otpState.value = OtpStatus.Idle
                 } else {
                     val auth = getFirebaseAuthSafely()
-                    auth.signInWithEmailAndPassword(emailOrPhone, authCode)
+                    auth.signInWithEmailAndPassword(cleanInput, authCode)
                         .addOnCompleteListener { task ->
                             viewModelScope.launch {
                                 if (task.isSuccessful) {
                                     val firebaseUser = auth.currentUser
-                                    val email = firebaseUser?.email ?: emailOrPhone
+                                    val email = firebaseUser?.email ?: cleanInput
                                     handleSuccessfulFirebaseEmailLogin(email)
                                     _otpState.value = OtpStatus.Verified
                                     onSuccess()
@@ -243,7 +254,7 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
                                         errorMsg.contains("Firebase", ignoreCase = true) ||
                                         errorMsg.contains("service", ignoreCase = true)) {
                                         android.util.Log.i("FirebaseAuth", "Sandbox fallback active: $errorMsg")
-                                        performLocalLogin(emailOrPhone, authCode, onSuccess, onError)
+                                        performLocalLogin(cleanInput, authCode, onSuccess, onError)
                                     } else {
                                         _otpState.value = OtpStatus.Error(errorMsg)
                                         onError(errorMsg)
@@ -254,7 +265,7 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
                 }
             } catch (e: Exception) {
                 android.util.Log.w("FirebaseAuth", "FirebaseAuth not ready, local sandbox fallback: ${e.message}")
-                performLocalLogin(emailOrPhone, authCode, onSuccess, onError)
+                performLocalLogin(cleanInput, authCode, onSuccess, onError)
             }
         }
     }
@@ -420,18 +431,21 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
     }
 
     private suspend fun performLocalRegistration(name: String, email: String, phone: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val existingEmail = repository.getUserByEmail(email)
-        val existingPhone = repository.getUserByPhone(phone)
+        val cleanEmail = email.trim().lowercase()
+        val cleanPhone = phone.trim()
+        val cleanName = name.trim()
+        val existingEmail = repository.getUserByEmail(cleanEmail)
+        val existingPhone = repository.getUserByPhone(cleanPhone)
         if (existingEmail != null || existingPhone != null) {
             _otpState.value = OtpStatus.Error("User already exists with this email or phone number")
             onError("User already exists with this email or phone number")
         } else {
             repository.logoutAll()
-            val user = UserEntity(fullName = name, email = email, phone = phone, passwordHash = pass, isSessionActive = true)
+            val user = UserEntity(fullName = cleanName, email = cleanEmail, phone = cleanPhone, passwordHash = pass, isSessionActive = true)
             val userId = repository.registerUser(user)
-            seedDemoFamilyTree(userId.toInt(), "$name's Family Tree")
+            seedDemoFamilyTree(userId.toInt(), "$cleanName's Family Tree")
             _otpState.value = OtpStatus.Verified
-            val loggedIn = repository.getUserByEmail(email)
+            val loggedIn = repository.getUserByEmail(cleanEmail)
             _activeUser.value = loggedIn
             _currentScreen.value = Screen.Home
             onSuccess()
@@ -439,7 +453,10 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
     }
 
     fun register(name: String, email: String, phone: String, pass: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        if (name.isBlank() || email.isBlank() || phone.isBlank() || pass.isBlank()) {
+        val cleanName = name.trim()
+        val cleanEmail = email.trim().lowercase()
+        val cleanPhone = phone.trim()
+        if (cleanName.isBlank() || cleanEmail.isBlank() || cleanPhone.isBlank() || pass.isBlank()) {
             onError("All fields are required")
             return
         }
@@ -448,21 +465,21 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
         viewModelScope.launch {
             if (isMockFirebaseConfigured()) {
                 android.util.Log.i("FirebaseAuth", "Mock Firebase detected on sign up. Falling back to secure local registration.")
-                performLocalRegistration(name, email, phone, pass, onSuccess, onError)
+                performLocalRegistration(cleanName, cleanEmail, cleanPhone, pass, onSuccess, onError)
                 return@launch
             }
             try {
                 val auth = getFirebaseAuthSafely()
-                auth.createUserWithEmailAndPassword(email, pass)
+                auth.createUserWithEmailAndPassword(cleanEmail, pass)
                     .addOnCompleteListener { task ->
                         viewModelScope.launch {
                             if (task.isSuccessful) {
                                 repository.logoutAll()
-                                val user = UserEntity(fullName = name, email = email, phone = phone, passwordHash = pass, isSessionActive = true)
+                                val user = UserEntity(fullName = cleanName, email = cleanEmail, phone = cleanPhone, passwordHash = pass, isSessionActive = true)
                                 val userId = repository.registerUser(user)
-                                seedDemoFamilyTree(userId.toInt(), "$name's Family Tree")
+                                seedDemoFamilyTree(userId.toInt(), "$cleanName's Family Tree")
                                 _otpState.value = OtpStatus.Verified
-                                val loggedIn = repository.getUserByEmail(email)
+                                val loggedIn = repository.getUserByEmail(cleanEmail)
                                 _activeUser.value = loggedIn
                                 _currentScreen.value = Screen.Home
                                 onSuccess()
@@ -473,7 +490,7 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
                                     errorMsg.contains("Firebase", ignoreCase = true) ||
                                     errorMsg.contains("service", ignoreCase = true)) {
                                     android.util.Log.i("FirebaseAuth", "Sandbox fallback active on signup: $errorMsg")
-                                    performLocalRegistration(name, email, phone, pass, onSuccess, onError)
+                                    performLocalRegistration(cleanName, cleanEmail, cleanPhone, pass, onSuccess, onError)
                                 } else {
                                     _otpState.value = OtpStatus.Error(errorMsg)
                                     onError(errorMsg)
@@ -483,17 +500,18 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
                     }
             } catch (e: Exception) {
                 android.util.Log.w("FirebaseAuth", "Signup failed or not configured, falling back to local: ${e.message}")
-                performLocalRegistration(name, email, phone, pass, onSuccess, onError)
+                performLocalRegistration(cleanName, cleanEmail, cleanPhone, pass, onSuccess, onError)
             }
         }
     }
 
     fun handleForgotPassword(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) = viewModelScope.launch {
-        if (email.isBlank()) {
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isBlank()) {
             onError("Email is required")
             return@launch
         }
-        val user = repository.getUserByEmail(email)
+        val user = repository.getUserByEmail(cleanEmail)
         if (user != null) {
             onSuccess()
         } else {
@@ -503,6 +521,17 @@ class MainViewModel(private val repository: FamilyTreeRepository) : ViewModel() 
 
     fun logout() = viewModelScope.launch {
         repository.logoutAll()
+        _activeUser.value = null
+        _activeTree.value = null
+        _members.value = emptyList()
+        _relationships.value = emptyList()
+        _activeMember.value = null
+        _currentScreen.value = Screen.Auth
+    }
+
+    fun resetDatabase() = viewModelScope.launch {
+        repository.logoutAll()
+        repository.nukeDatabase()
         _activeUser.value = null
         _activeTree.value = null
         _members.value = emptyList()

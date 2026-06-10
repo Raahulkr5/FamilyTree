@@ -141,6 +141,7 @@ fun TreeViewScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             }
         }
     ) { innerPadding ->
+        val primaryColor = MaterialTheme.colorScheme.primary
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -153,7 +154,7 @@ fun TreeViewScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .drawBehind {
                         val strokeWidth = 1.dp.toPx()
-                        val circleColor = Color(0xFF6750A4).copy(alpha = 0.07f)
+                        val circleColor = primaryColor.copy(alpha = 0.08f)
                         val intervals = floatArrayOf(25f, 20f)
                         val pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(intervals, 0f)
                         
@@ -299,8 +300,14 @@ fun FamilyNodeCard(
             }
         ),
         border = BorderStroke(
-            width = 2.dp,
-            color = if (member.gender == "Male") Color(0xFF6750A4) else if (member.gender == "Female") Color(0xFF7D5260) else Color(0xFF625B71)
+            width = 1.5.dp,
+            color = if (member.gender == "Male") {
+                MaterialTheme.colorScheme.primary
+            } else if (member.gender == "Female") {
+                MaterialTheme.colorScheme.secondary
+            } else {
+                MaterialTheme.colorScheme.tertiary
+            }
         ),
         modifier = Modifier
             .fillMaxWidth()

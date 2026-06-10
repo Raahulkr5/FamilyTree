@@ -13,6 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,67 @@ fun AuthScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
+    val currentThemeOption by viewModel.themeOption.collectAsState()
+    val isDark = isSystemInDarkTheme()
+
+    // Dynamic, premium background gradient brush that shifts based on the chosen option and system dark mode.
+    val backgroundBrush = remember(currentThemeOption, isDark) {
+        if (isDark) {
+            if (currentThemeOption == 1) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF231B05), // Luxurious deep gold-obsidian undertone
+                        Color(0xFF0F0E09)
+                    )
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0A0426), // Celestial deep cyber-indigo space
+                        Color(0xFF04020B)
+                    )
+                )
+            }
+        } else {
+            if (currentThemeOption == 1) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFFFDF5),
+                        Color(0xFFF7F1E2) // Warm ivory parchment
+                    )
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFAF7FF),
+                        Color(0xFFEDE4F7) // Clear sky-aurora lavender
+                    )
+                )
+            }
+        }
+    }
+
+    // Interactive animated breathing pulse halo around the logo representing generational connections.
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
     LaunchedEffect(otpState) {
         when (val state = otpState) {
             is OtpStatus.Idle -> {}
@@ -62,311 +126,496 @@ fun AuthScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .background(backgroundBrush)
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // App Logo Icon
-        Box(
+        Column(
             modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
-            Icon(
-                Icons.Default.AccountTree,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+            Spacer(modifier = Modifier.height(28.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Family Tree",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = "Preserving family lineages for generations to come",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Tab Selector for Email vs Phone OTP
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Button(
-                onClick = {
-                    isOtpTab = false
-                    errorMessage = null
-                    successMessage = null
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!isOtpTab) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    contentColor = if (!isOtpTab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .weight(1.0f)
-                    .testTag("email_login_tab")
+            // App Logo with Gorgeous Animating Pulse Halo
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(110.dp)
             ) {
-                Text("Email Account")
-            }
-            Button(
-                onClick = {
-                    isOtpTab = true
-                    errorMessage = null
-                    successMessage = null
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isOtpTab) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    contentColor = if (isOtpTab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .weight(1.0f)
-                    .testTag("otp_login_tab")
-            ) {
-                Text("Mobile OTP")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Display alerts
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage!!,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            )
-        }
-        if (successMessage != null) {
-            Text(
-                text = successMessage!!,
-                color = ForestGreen,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            )
-        }
-
-        // Fields
-        if (!isOtpTab) {
-            // Email Input
-            OutlinedTextField(
-                value = emailOrPhone,
-                onValueChange = { emailOrPhone = it },
-                label = { Text("Email Address") },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("email_input"),
-                singleLine = true
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Password Input
-            OutlinedTextField(
-                value = passwordOrOtpCount,
-                onValueChange = { passwordOrOtpCount = it },
-                label = { Text("Security Password") },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("password_input"),
-                singleLine = true
-            )
-        } else {
-            // Phone input
-            OutlinedTextField(
-                value = emailOrPhone,
-                onValueChange = { emailOrPhone = it },
-                label = { Text("Mobile Number (incl. country code)") },
-                placeholder = { Text("+1 (555) 019-2834") },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("phone_input"),
-                singleLine = true
-            )
-
-            if (otpSent) {
-                Spacer(modifier = Modifier.height(16.dp))
-                // OTP Code input
-                OutlinedTextField(
-                    value = passwordOrOtpCount,
-                    onValueChange = { passwordOrOtpCount = it },
-                    label = { Text("6-Digit Verification Code") },
-                    placeholder = { Text("e.g. 192837") },
-                    leadingIcon = { Icon(Icons.Default.VerifiedUser, contentDescription = null) },
-                    shape = RoundedCornerShape(12.dp),
+                // Outer Pulse Halo Ring
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("otp_code_input"),
-                    singleLine = true
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = pulseScale,
+                            scaleY = pulseScale
+                        )
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha))
                 )
-            }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Main action buttons
-        if (isOtpTab && !otpSent) {
-            Button(
-                onClick = {
-                    if (emailOrPhone.isBlank()) {
-                        errorMessage = "Please enter your mobile phone number"
-                    } else if (activity == null) {
-                        errorMessage = "Required system application context is missing"
-                    } else {
-                        viewModel.sendOtpCode(emailOrPhone, activity)
-                    }
-                },
-                enabled = otpState !is OtpStatus.Sending,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("send_otp_button")
-            ) {
-                if (otpState is OtpStatus.Sending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
+                // Inner Main Logo Container
+                Box(
+                    modifier = Modifier
+                        .size(76.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .border(
+                            1.5.dp, 
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), 
+                            RoundedCornerShape(22.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AccountTree,
+                        contentDescription = "App Logo",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(38.dp)
                     )
-                } else {
-                    Text("Request OTP Verification Code")
                 }
             }
-        } else {
-            Button(
-                onClick = {
-                    if (emailOrPhone.isBlank() || passwordOrOtpCount.isBlank()) {
-                        errorMessage = "Please fill out all required details"
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "FAMILY VERSE",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.5.sp
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = "Preserve and browse ancestral timelines in pristine high-fidelity",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Dynamic Option Layout Switcher (Fulfills requested Dual Options)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 18.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+                ),
+                border = BorderStroke(
+                    1.2.dp, 
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (currentThemeOption == 1) "👑 Option 1: Legacy Gold" else "🌌 Option 2: Cosmic Neon",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (currentThemeOption == 1) "Parchment golden-era heritage tone" else "Interstellar cyberspace neon flare",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Button(
+                        onClick = { viewModel.toggleThemeOption() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(50.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.testTag("auth_theme_option_toggle")
+                    ) {
+                        Icon(
+                            if (currentThemeOption == 1) Icons.Default.Palette else Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Toggle Theme", 
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+            }
+
+            // Main Credential Input Form (Glassmorphic elevating Card Container)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Modern styled inner Tab Selector
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Button(
+                            onClick = {
+                                isOtpTab = false
+                                errorMessage = null
+                                successMessage = null
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (!isOtpTab) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                contentColor = if (!isOtpTab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1.0f)
+                                .height(42.dp)
+                                .testTag("email_login_tab")
+                        ) {
+                            Text("Email", fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = {
+                                isOtpTab = true
+                                errorMessage = null
+                                successMessage = null
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isOtpTab) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                contentColor = if (isOtpTab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .weight(1.0f)
+                                .height(42.dp)
+                                .testTag("otp_login_tab")
+                        ) {
+                            Text("Mobile OTP", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Dynamic Alert/Notice banners
+                    if (errorMessage != null) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Error, 
+                                    contentDescription = null, 
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = errorMessage!!,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    if (successMessage != null) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle, 
+                                    contentDescription = null, 
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = successMessage!!,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    // Input Fields Block
+                    if (!isOtpTab) {
+                        OutlinedTextField(
+                            value = emailOrPhone,
+                            onValueChange = { emailOrPhone = it },
+                            label = { Text("Email Address") },
+                            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("email_input"),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = passwordOrOtpCount,
+                            onValueChange = { passwordOrOtpCount = it },
+                            label = { Text("Security Password") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            shape = RoundedCornerShape(14.dp),
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("password_input"),
+                            singleLine = true
+                        )
                     } else {
-                        if (isOtpTab) {
-                            viewModel.verifyOtpCode(
-                                code = passwordOrOtpCount,
-                                phone = emailOrPhone,
-                                onSuccess = {
-                                    successMessage = "Access Granted via Firebase Authentication"
-                                    errorMessage = null
-                                },
-                                onError = {
-                                    errorMessage = it
-                                    successMessage = null
-                                }
-                            )
-                        } else {
-                            viewModel.login(
-                                emailOrPhone = emailOrPhone,
-                                authCode = passwordOrOtpCount,
-                                isOtpFlow = isOtpTab,
-                                onSuccess = {
-                                    successMessage = "Access Granted"
-                                    errorMessage = null
-                                },
-                                onError = {
-                                    errorMessage = it
-                                    successMessage = null
-                                }
+                        OutlinedTextField(
+                            value = emailOrPhone,
+                            onValueChange = { emailOrPhone = it },
+                            label = { Text("Mobile Number") },
+                            placeholder = { Text("+1 (555) 019-2834") },
+                            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("phone_input"),
+                            singleLine = true
+                        )
+
+                        if (otpSent) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            OutlinedTextField(
+                                value = passwordOrOtpCount,
+                                onValueChange = { passwordOrOtpCount = it },
+                                label = { Text("6-Digit Code") },
+                                placeholder = { Text("e.g. 192837") },
+                                leadingIcon = { Icon(Icons.Default.VerifiedUser, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("otp_code_input"),
+                                singleLine = true
                             )
                         }
                     }
-                },
-                enabled = otpState !is OtpStatus.Sending,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-                    .testTag("login_submit_button")
-            ) {
-                if (otpState is OtpStatus.Sending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(if (isOtpTab) "Verify and Log In" else "Sign In")
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Verification Action Trigger Button
+                    if (isOtpTab && !otpSent) {
+                        Button(
+                            onClick = {
+                                if (emailOrPhone.isBlank()) {
+                                    errorMessage = "Please enter your mobile phone number in input field."
+                                } else if (activity == null) {
+                                    errorMessage = "Required system context is currently detached."
+                                } else {
+                                    viewModel.sendOtpCode(emailOrPhone, activity)
+                                }
+                            },
+                            enabled = otpState !is OtpStatus.Sending,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("send_otp_button"),
+                            elevation = ButtonDefaults.buttonColors().run { ButtonDefaults.elevatedButtonElevation() }
+                        ) {
+                            if (otpState is OtpStatus.Sending) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Request Verification Code", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                if (emailOrPhone.isBlank() || passwordOrOtpCount.isBlank()) {
+                                    errorMessage = "Please enter all required credentials information."
+                                } else {
+                                    if (isOtpTab) {
+                                        viewModel.verifyOtpCode(
+                                            code = passwordOrOtpCount,
+                                            phone = emailOrPhone,
+                                            onSuccess = {
+                                                successMessage = "Sandbox Authentication Approved!"
+                                                errorMessage = null
+                                            },
+                                            onError = {
+                                                errorMessage = it
+                                                successMessage = null
+                                            }
+                                        )
+                                    } else {
+                                        viewModel.login(
+                                            emailOrPhone = emailOrPhone,
+                                            authCode = passwordOrOtpCount,
+                                            isOtpFlow = isOtpTab,
+                                            onSuccess = {
+                                                successMessage = "Secured Vault Opened!"
+                                                errorMessage = null
+                                            },
+                                            onError = {
+                                                errorMessage = it
+                                                successMessage = null
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            enabled = otpState !is OtpStatus.Sending,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("login_submit_button"),
+                            elevation = ButtonDefaults.buttonColors().run { ButtonDefaults.elevatedButtonElevation() }
+                        ) {
+                            if (otpState is OtpStatus.Sending) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = if (isOtpTab) "Verify Code & Open Vault" else "Open Vault",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Redirect screen options
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TextButton(
+                            onClick = { viewModel.navigateTo(Screen.ForgotPassword) },
+                            modifier = Modifier.testTag("forgot_password_link")
+                        ) {
+                            Text("Recover Account", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                        }
+
+                        TextButton(
+                            onClick = { viewModel.navigateTo(Screen.Register) },
+                            modifier = Modifier.testTag("register_redirect_link")
+                        ) {
+                            Text("Create Profile", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                        }
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            // Beautiful Friction-Free Explorer Sandbox
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), 
+                thickness = 1.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Extra redirect options
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            TextButton(
-                onClick = { viewModel.navigateTo(Screen.ForgotPassword) },
-                modifier = Modifier.testTag("forgot_password_link")
+            Button(
+                onClick = {
+                    viewModel.login(
+                        emailOrPhone = "archivist@legacypreserve.com",
+                        authCode = "development_secret",
+                        isOtpFlow = false,
+                        onSuccess = {},
+                        onError = {}
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("guest_sandbox_button")
             ) {
-                Text("Forgot Password?")
-            }
-
-            TextButton(
-                onClick = { viewModel.navigateTo(Screen.Register) },
-                modifier = Modifier.testTag("register_redirect_link")
-            ) {
-                Text("Create Account")
-            }
-        }
-
-        // Guest quick access trigger
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedButton(
-            onClick = {
-                // Instantly log in guest as Thomas Pendragon flow of user
-                viewModel.login(
-                    emailOrPhone = "archivist@legacypreserve.com",
-                    authCode = "development_secret",
-                    isOtpFlow = false,
-                    onSuccess = {},
-                    onError = {}
+                Icon(
+                    Icons.Default.Visibility, 
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
-            },
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("guest_sandbox_button")
-        ) {
-            Icon(Icons.Default.Visibility, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Explore Seeded Sandbox (Friction-Free)")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Explore Seeded Sandbox", fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { viewModel.resetDatabase() },
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("reset_sandbox_db_button")
+            ) {
+                Icon(
+                    Icons.Default.DeleteForever, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Reset Local Sandbox (Fresh Start)", fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
