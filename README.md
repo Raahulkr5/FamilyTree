@@ -1,5 +1,3 @@
-# Run and deploy your AI Studio app
-
 This contains everything you need to run your app locally.
 1. Open Android Studio
 2. Select **Open** and choose the directory containing this project
